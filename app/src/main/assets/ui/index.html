@@ -16,6 +16,9 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 .full{display:none}body.completa .full{display:block}body.completa .row.full{display:grid}
 .sec{padding:9px 12px;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;cursor:pointer}
 .btn2{padding:10px 14px;margin:6px 6px 0 0;border:0;border-radius:8px;background:var(--ac);color:#fff;font-size:14px}
+#crop{position:fixed;inset:0;background:#000d;display:none;z-index:9;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:16px}
+#crop canvas{width:min(80vw,340px);height:min(80vw,340px);background:repeating-conic-gradient(#888 0 25%,#aaa 0 50%) 0 0/20px 20px;border-radius:12px;touch-action:none}
+#crop input[type=range]{width:min(80vw,340px)}#crop .b{display:flex;gap:10px}#crop p{color:#fff;margin:0;font-size:13px;text-align:center}
 </style></head><body class="minima"><main>
 <h1>HTML → APK / EXE</h1>
 <div class="tabs"><button id="tMin" class="on">MINIMA</button><button id="tFull">COMPLETA</button></div>
@@ -24,7 +27,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <div style="display:flex;gap:8px;flex-wrap:wrap">
 <button type="button" class="sec" onclick="H2A.pickFiles()">Elegir archivo(s) HTML</button>
 <button type="button" class="sec" onclick="H2A.pickFolder()">Elegir carpeta de la web</button>
-<button type="button" class="sec" onclick="H2A.pickIcon()">Icono PNG propio</button></div>
+<button type="button" class="sec" onclick="H2A.pickIcon()">Icono desde una imagen</button></div>
 <div id="fInfo" style="margin-top:8px;font-size:13px">Aún no elegiste nada.</div>
 <div id="iconInfo" style="font-size:13px"></div>
 </fieldset>
@@ -37,6 +40,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 
 <fieldset><legend>Básico</legend>
 <label>Nombre de la app</label><input type="text" id="name" value="MiApp">
+<label>Orientación</label><select id="orientation"><option value="unspecified">Automática</option><option value="portrait">Vertical</option><option value="landscape">Horizontal</option><option value="sensor">Sensor</option></select>
 <div class="chk"><label><input type="checkbox" id="tApk" checked> Android (APK)</label><label><input type="checkbox" id="tExe" checked> Windows (EXE)</label></div>
 </fieldset>
 
@@ -49,7 +53,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <label>Descripción</label><input type="text" id="description"></fieldset>
 
 <fieldset><legend>Android</legend><div class="row">
-<div><label>Orientación</label><select id="orientation"><option value="unspecified">Automática</option><option value="portrait">Vertical</option><option value="landscape">Horizontal</option><option value="sensor">Sensor</option></select></div>
+
 <div><label>Duración splash (ms)</label><input type="number" id="splashDuration" value="1500"></div>
 <div><label>Color splash</label><input type="text" id="splashColor" value="#ffffff"></div>
 <div><label>Color barra de estado</label><input type="text" id="statusBarColor" value="#000000"></div>
@@ -66,6 +70,8 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <div class="chk"><label><input type="checkbox" id="resizable" checked> Redimensionable</label><label><input type="checkbox" id="frame" checked> Marco de ventana</label><label><input type="checkbox" id="exeFullscreen"> Pantalla completa</label><label><input type="checkbox" id="maximized"> Maximizada</label><label><input type="checkbox" id="alwaysOnTop"> Siempre encima</label><label><input type="checkbox" id="hideMenu" checked> Ocultar menú</label><label><input type="checkbox" id="devTools"> Herramientas de desarrollo</label><label><input type="checkbox" id="singleInstance" checked> Una sola instancia</label><label><input type="checkbox" id="autoGrantWeb" checked> Conceder cámara/micrófono/ubicación sin preguntar</label></div></fieldset>
 </div>
 
+<div id="crop"><p>Arrastra para mover y usa el control para acercar. Se recorta en 1:1.</p><canvas id="cc" width="600" height="600"></canvas>
+<input type="range" id="zoom" min="1" max="4" step="0.01" value="1"><div class="b"><button class="btn2" id="cOk">Usar recorte</button><button class="btn2" id="cNo" style="background:#6b7280">Cancelar</button></div></div>
 <button id="go">Convertir</button><div id="msg"></div></main>
 <script>
 const $=id=>document.getElementById(id);
@@ -103,7 +109,7 @@ $('kwGo').onclick=()=>{
 };
 $('allPerms').onchange=e=>document.querySelectorAll('#perms input[value]').forEach(i=>i.checked=e.target.checked);
 function onFiles(r){$('fInfo').textContent=r.count+' archivo(s) listos. Página principal: '+(r.entry||'(no hay .html)')}
-function onIcon(){$('iconInfo').textContent='Icono PNG propio cargado'}
+function onIcon(){$('iconInfo').textContent='Icono desde una imagen cargado'}
 function onResult(txt){
   const r=JSON.parse(txt),m=$('msg');m.style.display='block';$('go').disabled=false;
   if(!r.ok){m.className='err';m.textContent='Error: '+r.error;return}
@@ -113,12 +119,34 @@ function onResult(txt){
   if(r.apk){add('Instalar APK',()=>H2A.install(r.apk));add('Compartir APK',()=>H2A.share(r.apk))}
   if(r.zip)add('Compartir proyecto Windows (ZIP)',()=>H2A.share(r.zip));
 }
+
+// ---- Recorte 1:1 de imagen para el icono ----
+let cImg=null,cx=0,cy=0,cs=1,base=1;
+const cc=$('cc'),cctx=cc.getContext('2d');
+function cDraw(){cctx.clearRect(0,0,600,600);if(!cImg)return;const sc=base*cs,w=cImg.width*sc,h=cImg.height*sc;
+  cx=Math.min(Math.max(cx,600-w>0?(600-w)/2:600-w),600-w>0?(600-w)/2:0);cy=Math.min(Math.max(cy,600-h>0?(600-h)/2:600-h),600-h>0?(600-h)/2:0);
+  cctx.drawImage(cImg,cx,cy,w,h)}
+function onIconImage(b64){
+  const im=new Image();im.onload=()=>{cImg=im;base=Math.max(600/im.width,600/im.height);cs=1;$('zoom').value=1;
+    cx=(600-im.width*base)/2;cy=(600-im.height*base)/2;$('crop').style.display='flex';cDraw()};
+  im.onerror=()=>{$('iconInfo').textContent='No se pudo abrir esa imagen'};im.src='data:image/png;base64,'+b64}
+$('zoom').oninput=e=>{const n=+e.target.value,k=n/cs;cx=300-(300-cx)*k;cy=300-(300-cy)*k;cs=n;cDraw()};
+let drag=null;
+cc.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};cc.setPointerCapture(e.pointerId)};
+cc.onpointermove=e=>{if(!drag)return;const r=600/cc.clientWidth;cx+=(e.clientX-drag.x)*r;cy+=(e.clientY-drag.y)*r;drag={x:e.clientX,y:e.clientY};cDraw()};
+cc.onpointerup=()=>drag=null;
+$('cNo').onclick=()=>{$('crop').style.display='none'};
+$('cOk').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=1024;const k=1024/600,sc=base*cs;
+  o.getContext('2d').drawImage(cImg,cx*k,cy*k,cImg.width*sc*k,cImg.height*sc*k);
+  const b=o.toDataURL('image/png').split(',')[1];H2A.setIcon(b);iconB64=b;
+  $('iconInfo').innerHTML='Icono recortado listo <img src="data:image/png;base64,'+b+'" width="40" style="vertical-align:middle;border-radius:8px">';
+  $('crop').style.display='none'};
 $('go').onclick=()=>{
   const m=$('msg');m.style.display='block';m.className='';m.textContent='Generando…';$('go').disabled=true;
   const full=document.body.classList.contains('completa');
-  const o={mode:full?'completa':'minima',name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean)};
+  const o={mode:full?'completa':'minima',orientation:$('orientation').value,name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean)};
   if(full){
-    for(const id of ['packageId','author','version','description','orientation','splashColor','statusBarColor','backgroundColor','installer'])o[id]=$(id).value;
+    for(const id of ['packageId','author','version','description','splashColor','statusBarColor','backgroundColor','installer'])o[id]=$(id).value;
     for(const id of ['versionCode','splashDuration','minSdk','targetSdk','width','height','minWidth','minHeight'])o[id]=+$(id).value;
     for(const id of ['fullscreen','allowCleartext','keepAwake','askOnStart','autoGrantWeb','resizable','frame','exeFullscreen','maximized','alwaysOnTop','hideMenu','devTools','singleInstance'])o[id]=$(id).checked;
     o.permissions=[...document.querySelectorAll('#perms input[value]:checked')].map(i=>i.value);

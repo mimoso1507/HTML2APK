@@ -118,8 +118,19 @@ public class MainActivity extends Activity {
                     walk(root, "");
                     reportFiles();
                 } else if (req == REQ_ICON) {
-                    iconBytes = readAll(getContentResolver().openInputStream(data.getData()));
-                    js("onIcon(true)");
+                    byte[] raw = readAll(getContentResolver().openInputStream(data.getData()));
+                    BitmapFactory.Options bo = new BitmapFactory.Options();
+                    bo.inJustDecodeBounds = true;
+                    BitmapFactory.decodeByteArray(raw, 0, raw.length, bo);
+                    int sample = 1;
+                    while (Math.max(bo.outWidth, bo.outHeight) / sample > 2048) sample *= 2;
+                    BitmapFactory.Options o2 = new BitmapFactory.Options();
+                    o2.inSampleSize = sample;
+                    Bitmap bm = BitmapFactory.decodeByteArray(raw, 0, raw.length, o2);
+                    if (bm == null) { js("onIconImage('')"); return; }
+                    ByteArrayOutputStream png = new ByteArrayOutputStream();
+                    bm.compress(Bitmap.CompressFormat.PNG, 100, png);
+                    js("onIconImage('" + Base64.encodeToString(png.toByteArray(), Base64.NO_WRAP) + "')");
                 }
             } catch (Throwable t) { fail("No se pudo leer: " + t.getMessage()); }
         }).start();

@@ -71,7 +71,7 @@ public final class Converter {
             }
             JSONObject cfg = new JSONObject();
             cfg.put("entry", entry);
-            cfg.put("orientation", minima ? "unspecified" : o.optString("orientation", "unspecified"));
+            cfg.put("orientation", o.optString("orientation", "unspecified"));
             cfg.put("fullscreen", !minima && o.optBoolean("fullscreen", false));
             cfg.put("statusBarColor", minima ? "#000000" : o.optString("statusBarColor", "#000000"));
             cfg.put("backgroundColor", minima ? "#ffffff" : o.optString("backgroundColor", "#ffffff"));
