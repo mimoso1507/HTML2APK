@@ -6,8 +6,8 @@ android {
         applicationId 'com.h2a.converter'
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode (project.findProperty('vcode') ?: 1).toInteger()
+        versionName '1.' + (project.findProperty('vcode') ?: 1)
     }
     signingConfigs {
         debug {
@@ -16,6 +16,9 @@ android {
             keyAlias 'h2a'
             keyPassword 'h2apass'
             storeType 'pkcs12'
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

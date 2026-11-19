@@ -24,11 +24,16 @@ jobs:
         run: |
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
           APK=app/build/test-out/miprueba.apk
-          unzip -l $APK | head -30
+          unzip -l $APK | head -5
           $BT/aapt2 dump badging $APK | head -30
           $BT/apksigner verify --verbose $APK
       - name: Build converter APK
-        run: gradle :app:assembleDebug --no-daemon
+        run: gradle :app:assembleDebug --no-daemon -Pvcode=${{ github.run_number }}
+      - name: Check converter APK
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/apksigner verify --verbose --print-certs app/build/outputs/apk/debug/app-debug.apk
+          $BT/aapt2 dump badging app/build/outputs/apk/debug/app-debug.apk | head -4
       - uses: actions/upload-artifact@v4
         with:
           name: HTML2APK-convertidor
