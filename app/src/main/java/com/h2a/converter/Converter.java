@@ -84,11 +84,11 @@ public final class Converter {
             for (String p : in.permissions) if (Perms.isRuntime(p)) rt.put(p);
             cfg.put("runtime", rt);
             in.configJson = cfg.toString();
-            r.apk = new File(outDir, slug(name) + ".apk");
+            r.apk = new File(outDir, slug(name) + "-v" + in.version + ".apk");
             ApkBuilder.build(templateApk, in, key, cert, r.apk);
         }
         if (wantExe) {
-            r.exeZip = new File(outDir, slug(name) + "-windows.zip");
+            r.exeZip = new File(outDir, slug(name) + "-v" + (minima ? "1.0.0" : o.optString("version", "1.0.0")) + "-windows.zip");
             ExeProject.write(minima ? new JSONObject().put("name", name) : o, entry, pkgId, files, iconRaw, r.exeZip);
         }
         return r;

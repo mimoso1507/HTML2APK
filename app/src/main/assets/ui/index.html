@@ -20,7 +20,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 #crop canvas{width:min(80vw,340px);height:min(80vw,340px);background:repeating-conic-gradient(#888 0 25%,#aaa 0 50%) 0 0/20px 20px;border-radius:12px;touch-action:none}
 #crop input[type=range]{width:min(80vw,340px)}#crop .b{display:flex;gap:10px}#crop p{color:#fff;margin:0;font-size:13px;text-align:center}
 </style></head><body class="minima"><main>
-<h1>HTML → APK / EXE</h1>
+<h1>HTML → APK / EXE <small id="ver" style="font-size:13px;opacity:.6"></small></h1>
 <div class="tabs"><button id="tMin" class="on">MINIMA</button><button id="tFull">COMPLETA</button></div>
 
 <fieldset><legend>Tu HTML</legend>
@@ -108,6 +108,7 @@ $('kwGo').onclick=()=>{
   box.firstChild.click();
 };
 $('allPerms').onchange=e=>document.querySelectorAll('#perms input[value]').forEach(i=>i.checked=e.target.checked);
+try{$('ver').textContent='v'+H2A.version()}catch(e){}
 function onFiles(r){$('fInfo').textContent=r.count+' archivo(s) listos. Página principal: '+(r.entry||'(no hay .html)')}
 function onIcon(){$('iconInfo').textContent='Icono desde una imagen cargado'}
 function onResult(txt){

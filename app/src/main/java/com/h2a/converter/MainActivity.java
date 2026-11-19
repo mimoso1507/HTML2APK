@@ -64,6 +64,9 @@ public class MainActivity extends Activity {
                     .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(i, REQ_FILES);
         }
+        @JavascriptInterface public String version() {
+            try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
+        }
         @JavascriptInterface public void pickFolder() { startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_DIR); }
         @JavascriptInterface public void pickIcon() {
             startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), REQ_ICON);
