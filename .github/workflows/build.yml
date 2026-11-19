@@ -23,7 +23,7 @@ jobs:
       - name: Verify generated APK
         run: |
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
-          APK=app/build/test-out/miprueba.apk
+          APK=$(ls app/build/test-out/*.apk | head -1)
           unzip -l $APK | head -5
           $BT/aapt2 dump badging $APK | head -30
           $BT/apksigner verify --verbose $APK
