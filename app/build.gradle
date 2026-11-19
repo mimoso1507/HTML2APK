@@ -1,4 +1,5 @@
 plugins { id 'com.android.application' }
+def vc = Integer.parseInt((project.findProperty('vcode') ?: '1').toString())
 android {
     namespace 'com.h2a.converter'
     compileSdk 34
@@ -6,8 +7,8 @@ android {
         applicationId 'com.h2a.converter'
         minSdk 26
         targetSdk 34
-        versionCode (project.findProperty('vcode') ?: 1).toInteger()
-        versionName '1.' + (project.findProperty('vcode') ?: 1)
+        versionCode vc
+        versionName '1.' + vc
     }
     signingConfigs {
         debug {
