@@ -67,6 +67,26 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String version() {
             try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
         }
+        @JavascriptInterface public void aiIcon(final String prompt) {
+            new Thread(() -> {
+                try {
+                    String full = "app icon, " + prompt + ", flat vector illustration, centered, simple clean background, no text";
+                    String url = "https://image.pollinations.ai/prompt/" + java.net.URLEncoder.encode(full, "UTF-8").replace("+", "%20")
+                            + "?width=1024&height=1024&nologo=true&seed=" + (int) (Math.random() * 100000);
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                    c.setConnectTimeout(20000); c.setReadTimeout(120000);
+                    if (c.getResponseCode() != 200) throw new IOException("El servicio de IA respondio " + c.getResponseCode());
+                    byte[] raw = readAll(c.getInputStream());
+                    Bitmap bm = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                    if (bm == null) throw new IOException("Imagen no valida");
+                    ByteArrayOutputStream png = new ByteArrayOutputStream();
+                    bm.compress(Bitmap.CompressFormat.PNG, 100, png);
+                    js("onIconImage('" + Base64.encodeToString(png.toByteArray(), Base64.NO_WRAP) + "')");
+                } catch (Throwable t) {
+                    js("onAiError(" + JSONObject.quote(String.valueOf(t.getMessage())) + ")");
+                }
+            }).start();
+        }
         @JavascriptInterface public void pickFolder() { startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_DIR); }
         @JavascriptInterface public void pickIcon() {
             startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), REQ_ICON);
@@ -190,7 +210,7 @@ public class MainActivity extends Activity {
             Bitmap bm = BitmapFactory.decodeByteArray(iconBytes, 0, iconBytes.length);
             if (bm != null) {
                 ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                Bitmap.createScaledBitmap(bm, 192, 192, true).compress(Bitmap.CompressFormat.PNG, 100, bo);
+                Bitmap.createScaledBitmap(bm, 512, 512, true).compress(Bitmap.CompressFormat.PNG, 100, bo);
                 iconApk = bo.toByteArray();
             }
         }

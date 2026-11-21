@@ -32,10 +32,27 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <div id="iconInfo" style="font-size:13px"></div>
 </fieldset>
 
-<fieldset><legend>Generador de icono (escribe una palabra clave)</legend>
-<div style="display:flex;gap:8px"><input type="text" id="kw" placeholder="ej: musica, juego, tienda, clima, foto…"><button id="kwGo" type="button" style="padding:7px 14px">Generar</button></div>
-<div id="icons" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
-<div style="font-size:12px;opacity:.7;margin-top:6px">Toca una variante para usarla como icono. Si subes un PNG propio, ese tiene prioridad.</div>
+<fieldset id="igen"><legend>Generador de iconos</legend>
+<div style="display:flex;gap:8px"><input type="text" id="kw" placeholder="Palabra clave: música, tienda, clima…"><button id="kwGo" type="button" class="sec">Sugerir</button></div>
+<div id="icons" style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"></div>
+<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+<canvas id="prev" width="1024" height="1024" style="width:128px;height:128px;border-radius:12px;background:repeating-conic-gradient(#8885 0 25%,#aaa5 0 50%) 0 0/16px 16px"></canvas>
+<div style="flex:1;min-width:180px"><button type="button" class="sec" id="rnd">🎲 Sorpréndeme</button> <button type="button" class="btn2" id="useIcon">Usar este icono</button>
+<div style="font-size:12px;opacity:.7;margin-top:6px">Toca una sugerencia o personaliza abajo.</div></div></div>
+<details open style="margin-top:10px"><summary><b>Personalizar</b></summary>
+<div class="row"><div><label>Forma</label><select id="i_shape"></select></div><div><label>Fondo</label><select id="i_bg"></select></div>
+<div><label>Color 1</label><input type="color" id="i_c1"></div><div><label>Color 2</label><input type="color" id="i_c2"></div>
+<div><label>Ángulo</label><input type="range" id="i_angle" min="0" max="360"></div><div><label>Patrón</label><select id="i_pat"></select></div>
+<div><label>Intensidad del patrón</label><input type="range" id="i_patA" min="0" max="50"></div><div><label>Fuente</label><select id="i_font"></select></div>
+<div><label>Emoji o letras</label><input type="text" id="i_text" maxlength="6"></div><div><label>Color del texto</label><input type="color" id="i_tc"></div>
+<div><label>Tamaño</label><input type="range" id="i_size" min="25" max="90"></div><div><label>Subir / bajar</label><input type="range" id="i_dy" min="-20" max="20"></div></div>
+<div class="chk"><label><input type="checkbox" id="i_shadow">Sombra</label><label><input type="checkbox" id="i_outline">Contorno</label><input type="color" id="i_outlineC"><label><input type="checkbox" id="i_gloss">Brillo</label><label><input type="checkbox" id="i_ring">Borde</label><label><input type="checkbox" id="i_vignette">Viñeta</label></div>
+</details>
+<details style="margin-top:10px"><summary><b>Con IA (internet)</b></summary>
+<label>Describe el icono</label><input type="text" id="aiPrompt" placeholder="ej: gato astronauta en una luna morada">
+<button type="button" class="btn2" id="aiGo">Generar con IA</button>
+<div id="aiInfo" style="font-size:13px;margin-top:6px"></div>
+<div style="font-size:11px;opacity:.65;margin-top:4px">Usa el servicio gratuito Pollinations: el texto que escribas se envía a ese servicio. La imagen se abre en el editor de recorte.</div></details>
 </fieldset>
 
 <fieldset><legend>Básico</legend>
@@ -80,33 +97,88 @@ $('tMin').onclick=()=>mode('minima');$('tFull').onclick=()=>mode('completa');
 const b64=f=>new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)});
 
 const GLY={musica:'🎵',music:'🎵',juego:'🎮',game:'🎮',tienda:'🛒',shop:'🛒',clima:'⛅',weather:'⛅',foto:'📷',camara:'📷',photo:'📷',chat:'💬',mensaje:'💬',mapa:'🗺️',map:'🗺️',salud:'❤️',health:'❤️',comida:'🍔',food:'🍔',receta:'🍳',libro:'📚',book:'📚',escuela:'🎓',school:'🎓',dinero:'💰',money:'💰',banco:'🏦',calculadora:'🧮',notas:'📝',note:'📝',tareas:'✅',todo:'✅',reloj:'⏰',clock:'⏰',calendario:'📅',calendar:'📅',video:'🎬',cine:'🎬',radio:'📻',viaje:'✈️',travel:'✈️',coche:'🚗',car:'🚗',deporte:'⚽',sport:'⚽',gym:'🏋️',fitness:'🏋️',mascota:'🐶',perro:'🐶',gato:'🐱',cat:'🐱',dog:'🐶',casa:'🏠',home:'🏠',trabajo:'💼',work:'💼',correo:'✉️',email:'✉️',seguridad:'🔒',lock:'🔒',luz:'💡',idea:'💡',cohete:'🚀',rocket:'🚀',estrella:'⭐',star:'⭐',fuego:'🔥',fire:'🔥',planta:'🌱',naturaleza:'🌿',cafe:'☕',coffee:'☕',pizza:'🍕',arte:'🎨',art:'🎨',dibujo:'🎨',herramientas:'🔧',tools:'🔧',codigo:'💻',code:'💻',web:'🌐',internet:'🌐',robot:'🤖',ia:'🤖',ai:'🤖',noticias:'📰',news:'📰',regalo:'🎁',gift:'🎁',amor:'💖',love:'💖',tiempo:'⏳',quiz:'❓',trivia:'❓',dado:'🎲',dice:'🎲',ajedrez:'♟️',chess:'♟️'};
-const PAL=[['#6366f1','#8b5cf6'],['#f97316','#ef4444'],['#10b981','#06b6d4'],['#ec4899','#f43f5e'],['#0ea5e9','#2563eb'],['#facc15','#f97316'],['#1f2937','#4b5563'],['#14b8a6','#22c55e']];
-const norm=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
+Object.assign(GLY,{juegos:'🎮',gamer:'🕹️',pelota:'⚽',futbol:'⚽',basket:'🏀',musicas:'🎶',guitarra:'🎸',piano:'🎹',bateria:'🥁',microfono:'🎤',cancion:'🎵',telefono:'📞',llamada:'📞',mensajes:'💬',carrito:'🛒',compras:'🛍️',oferta:'🏷️',restaurante:'🍽️',hamburguesa:'🍔',helado:'🍦',pastel:'🍰',fruta:'🍎',verdura:'🥕',vino:'🍷',cerveza:'🍺',medico:'🩺',hospital:'🏥',farmacia:'💊',corazon:'❤️',doctor:'🩺',tren:'🚆',avion:'✈️',bus:'🚌',bici:'🚲',moto:'🏍️',barco:'⛵',playa:'🏖️',montana:'⛰️',sol:'☀️',luna:'🌙',lluvia:'🌧️',nube:'☁️',rayo:'⚡',agua:'💧',arbol:'🌳',flor:'🌸',animal:'🐾',leon:'🦁',pajaro:'🐦',pez:'🐟',mariposa:'🦋',libros:'📖',lapiz:'✏️',idiomas:'🗣️',ciencia:'🔬',mate:'➕',matematicas:'➗',musica2:'🎼',camara2:'🎥',galeria:'🖼️',pintura:'🎨',moda:'👗',zapato:'👟',joya:'💎',corona:'👑',trofeo:'🏆',medalla:'🥇',meta:'🎯',mapa2:'📍',brujula:'🧭',globo:'🌍',escudo:'🛡️',llave:'🔑',candado:'🔐',wifi:'📶',bateria2:'🔋',enchufe:'🔌',impresora:'🖨️',nota:'🗒️',archivo:'📁',nube2:'☁️',descarga:'⬇️',subir:'⬆️',buscar:'🔍',lupa:'🔍',ajustes:'⚙️',config:'⚙️',reloj2:'⌚',alarma:'⏰',timer:'⏱️',dinero2:'💵',bitcoin:'₿',grafico:'📈',empresa:'🏢',fabrica:'🏭',tractor:'🚜',construccion:'🏗️',madera:'🪵',martillo:'🔨',pegamento:'🧴',bebe:'👶',familia:'👨‍👩‍👧',amigos:'🧑‍🤝‍🧑',fiesta:'🎉',cumple:'🎂',navidad:'🎄',halloween:'🎃',fantasma:'👻',alien:'👽',dragon:'🐉',espada:'⚔️',magia:'✨',brillo:'✨',diamante:'💎',yoga:'🧘',correr:'🏃',natacion:'🏊',pesca:'🎣',camping:'⛺',}); 
+// ================= Generador de iconos =================
+const PAL=[['#6366f1','#8b5cf6'],['#f97316','#ef4444'],['#10b981','#06b6d4'],['#ec4899','#f43f5e'],['#0ea5e9','#2563eb'],['#facc15','#f97316'],['#1f2937','#4b5563'],['#14b8a6','#22c55e'],['#a855f7','#ec4899'],['#06b6d4','#6366f1'],['#84cc16','#16a34a'],['#fb7185','#f59e0b'],['#0f172a','#334155'],['#f43f5e','#7c3aed'],['#38bdf8','#34d399'],['#fde047','#fb923c']];
+const norm=t=>t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+function hash(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 let iconB64=null;
-function draw(cv,glyph,pal,shape){
-  const c=cv.getContext('2d'),S=cv.width;c.clearRect(0,0,S,S);
-  const g=c.createLinearGradient(0,0,S,S);g.addColorStop(0,pal[0]);g.addColorStop(1,pal[1]);c.fillStyle=g;
-  c.beginPath();
-  if(shape==='circle')c.arc(S/2,S/2,S/2,0,7);else if(shape==='square')c.rect(0,0,S,S);else c.roundRect(0,0,S,S,S*.22);
-  c.fill();c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff';
-  const letter=/^[A-Za-z0-9]/.test(glyph);
-  c.font=(letter?'bold '+S*.55+'px system-ui,sans-serif':S*.55+'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif');
-  c.fillText(glyph,S/2,S/2+S*.03);
-}
-$('kwGo').onclick=()=>{
-  const k=norm($('kw').value);if(!k)return;
-  const key=Object.keys(GLY).find(x=>k===norm(x))||Object.keys(GLY).find(x=>k.includes(norm(x))||norm(x).includes(k)&&k.length>2);
-  const glyph=key?GLY[key]:k.slice(0,2).replace(/^./,c=>c.toUpperCase());
-  const box=$('icons');box.innerHTML='';const h=hash(k);
-  ['rounded','circle','square','rounded','circle','square'].forEach((shape,i)=>{
-    const cv=document.createElement('canvas');cv.width=cv.height=1024;cv.style.cssText='width:84px;height:84px;cursor:pointer;border:3px solid transparent;border-radius:12px';
-    draw(cv,glyph,PAL[(h+i*3)%PAL.length],shape);
-    cv.onclick=()=>{[...box.children].forEach(x=>x.style.borderColor='transparent');cv.style.borderColor='#2563eb';iconB64=cv.toDataURL('image/png').split(',')[1];H2A.setIcon(iconB64);$('iconInfo').textContent='Icono generado seleccionado'};
-    box.appendChild(cv);
-  });
-  box.firstChild.click();
-};
+const hex2rgb=h=>{h=h.replace('#','');if(h.length==3)h=[...h].map(x=>x+x).join('');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const rgb2hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+function shade(h,a){const[r,g,b]=hex2rgb(h);return a>=0?rgb2hex(r+(255-r)*a,g+(255-g)*a,b+(255-b)*a):rgb2hex(r*(1+a),g*(1+a),b*(1+a))}
+function hueShift(h,deg){let[r,g,b]=hex2rgb(h).map(v=>v/255);const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,Sx=0,L=(mx+mn)/2;const d=mx-mn;
+  if(d){Sx=L>.5?d/(2-mx-mn):d/(mx+mn);H=mx==r?(g-b)/d+(g<b?6:0):mx==g?(b-r)/d+2:(r-g)/d+4;H*=60}
+  H=(H+deg+360)%360;const f=n=>{const k=(n+H/30)%12;return L-Sx*Math.min(L,1-L)*Math.max(-1,Math.min(k-3,9-k,1))};return rgb2hex(f(0)*255,f(8)*255,f(4)*255)}
+const SHAPES={round:'Redondeado',circle:'Círculo',square:'Cuadrado',squircle:'Súper-redondo',hex:'Hexágono',shield:'Escudo',badge:'Sello'};
+const BGS={linear:'Degradado',radial:'Radial',solid:'Sólido',conic:'Cónico',mesh:'Malla'};
+const PATS={none:'Ninguno',dots:'Puntos',lines:'Líneas',waves:'Ondas',grid:'Cuadrícula',rings:'Anillos',rays:'Rayos',stars:'Estrellas'};
+const FONTS={sans:'bold {s}px system-ui,sans-serif',serif:'bold {s}px Georgia,serif',mono:'bold {s}px monospace',round:'900 {s}px "Trebuchet MS",system-ui,sans-serif',script:'italic bold {s}px "Brush Script MT",cursive,serif'};
+function shapePath(c,S,sh){c.beginPath();const m=S*.0;
+  if(sh==='circle')c.arc(S/2,S/2,S/2,0,7);
+  else if(sh==='square')c.rect(0,0,S,S);
+  else if(sh==='squircle')c.roundRect(0,0,S,S,S*.38);
+  else if(sh==='hex'){for(let i=0;i<6;i++){const a=Math.PI/180*(90+60*i);c.lineTo(S/2+S*.5*Math.cos(a),S/2+S*.5*Math.sin(a))}c.closePath()}
+  else if(sh==='shield'){c.moveTo(S*.08,S*.04);c.lineTo(S*.92,S*.04);c.lineTo(S*.92,S*.5);c.bezierCurveTo(S*.92,S*.78,S*.72,S*.92,S*.5,S);c.bezierCurveTo(S*.28,S*.92,S*.08,S*.78,S*.08,S*.5);c.closePath()}
+  else if(sh==='badge'){for(let i=0;i<32;i++){const a=Math.PI*2*i/32,r=S*(i%2?.45:.5);c.lineTo(S/2+r*Math.cos(a),S/2+r*Math.sin(a))}c.closePath()}
+  else c.roundRect(0,0,S,S,S*.22)}
+function fillBg(c,S,o){const c1=o.c1,c2=o.c2;
+  if(o.bg==='solid'){c.fillStyle=c1;c.fillRect(0,0,S,S);return}
+  if(o.bg==='radial'){const g=c.createRadialGradient(S*.35,S*.3,S*.05,S/2,S/2,S*.75);g.addColorStop(0,shade(c1,.25));g.addColorStop(1,c2);c.fillStyle=g;c.fillRect(0,0,S,S);return}
+  if(o.bg==='conic'&&c.createConicGradient){const g=c.createConicGradient(Math.PI*(o.angle/180),S/2,S/2);g.addColorStop(0,c1);g.addColorStop(.5,c2);g.addColorStop(1,c1);c.fillStyle=g;c.fillRect(0,0,S,S);return}
+  if(o.bg==='mesh'){c.fillStyle=c1;c.fillRect(0,0,S,S);const c3=hueShift(c2,50);
+    [[.15,.2,c2],[.85,.25,c3],[.5,.95,shade(c1,.2)],[.9,.9,c2]].forEach(([x,y,col])=>{const g=c.createRadialGradient(S*x,S*y,0,S*x,S*y,S*.7);g.addColorStop(0,col);g.addColorStop(1,col+'00');c.fillStyle=g;c.fillRect(0,0,S,S)});return}
+  const a=o.angle*Math.PI/180,dx=Math.cos(a)*S/2,dy=Math.sin(a)*S/2;const g=c.createLinearGradient(S/2-dx,S/2-dy,S/2+dx,S/2+dy);g.addColorStop(0,c1);g.addColorStop(1,c2);c.fillStyle=g;c.fillRect(0,0,S,S)}
+function drawPattern(c,S,o){if(o.pat==='none')return;c.save();c.globalAlpha=o.patA;c.fillStyle=c.strokeStyle='#fff';const n=o.patN,st=S/n;
+  if(o.pat==='dots'){for(let i=0;i<=n;i++)for(let j=0;j<=n;j++){c.beginPath();c.arc(i*st+(j%2?st/2:0),j*st,st*.12,0,7);c.fill()}}
+  else if(o.pat==='lines'){c.lineWidth=st*.22;for(let k=-n;k<=2*n;k++){c.beginPath();c.moveTo(k*st,0);c.lineTo(k*st-S,S);c.stroke()}}
+  else if(o.pat==='waves'){c.lineWidth=st*.18;for(let j=0;j<=n;j++){c.beginPath();for(let x=0;x<=S;x+=S/40)c.lineTo(x,j*st+Math.sin(x/S*Math.PI*4)*st*.28);c.stroke()}}
+  else if(o.pat==='grid'){c.lineWidth=st*.08;for(let i=0;i<=n;i++){c.beginPath();c.moveTo(i*st,0);c.lineTo(i*st,S);c.moveTo(0,i*st);c.lineTo(S,i*st);c.stroke()}}
+  else if(o.pat==='rings'){c.lineWidth=st*.18;for(let i=1;i<=n;i++){c.beginPath();c.arc(S/2,S/2,i*st*.75,0,7);c.stroke()}}
+  else if(o.pat==='rays'){const k=n*2;for(let i=0;i<k;i++){const a=Math.PI*2*i/k,b=a+Math.PI/k;c.beginPath();c.moveTo(S/2,S/2);c.lineTo(S/2+S*Math.cos(a),S/2+S*Math.sin(a));c.lineTo(S/2+S*Math.cos(b),S/2+S*Math.sin(b));c.fill()}}
+  else if(o.pat==='stars'){for(let i=0;i<=n;i++)for(let j=0;j<=n;j++){const x=i*st+(j%2?st/2:0),y=j*st,r=st*.2;c.beginPath();for(let k=0;k<10;k++){const a=Math.PI/5*k-Math.PI/2,rr=k%2?r*.45:r;c.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}c.closePath();c.fill()}}
+  c.restore()}
+function drawIcon(cv,o){const S=cv.width,c=cv.getContext('2d');c.clearRect(0,0,S,S);c.save();shapePath(c,S,o.shape);c.clip();
+  fillBg(c,S,o);drawPattern(c,S,o);
+  if(o.vignette){const g=c.createRadialGradient(S/2,S/2,S*.25,S/2,S/2,S*.72);g.addColorStop(0,'#0000');g.addColorStop(1,'#0006');c.fillStyle=g;c.fillRect(0,0,S,S)}
+  if(o.gloss){const g=c.createLinearGradient(0,0,0,S*.55);g.addColorStop(0,'#ffffff66');g.addColorStop(1,'#ffffff00');c.fillStyle=g;c.beginPath();c.ellipse(S/2,-S*.15,S*.8,S*.62,0,0,7);c.fill()}
+  c.restore();
+  // contenido
+  const v=(o.text||'').trim();
+  if(v){c.save();c.textAlign='center';c.textBaseline='middle';const isE=/\p{Extended_Pictographic}/u.test(v);
+    const sz=S*o.size/100;c.font=isE?sz*.9+'px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif':FONTS[o.font].replace('{s}',sz*(v.length>1?.85/Math.min(v.length,3)*1.15:1));
+    if(o.shadow){c.shadowColor='#0007';c.shadowBlur=S*.04;c.shadowOffsetY=S*.02}
+    const y=S/2+S*.03+o.dy*S/100;
+    if(!isE&&o.outline){c.lineWidth=S*.035;c.strokeStyle=o.outlineC;c.lineJoin='round';c.strokeText(v,S/2,y)}
+    c.fillStyle=o.tc;c.fillText(v,S/2,y);c.restore()}
+  if(o.ring){c.save();shapePath(c,S,o.shape);c.clip();c.lineWidth=S*.05;c.strokeStyle='#ffffff88';shapePath(c,S,o.shape);c.stroke();c.restore()}}
+const DEF={shape:'round',bg:'linear',c1:'#6366f1',c2:'#8b5cf6',angle:45,pat:'none',patA:.18,patN:8,text:'🚀',size:55,dy:0,font:'sans',tc:'#ffffff',shadow:true,outline:false,outlineC:'#000000',gloss:true,ring:false,vignette:false};
+let IC=Object.assign({},DEF);
+function glyphFor(k){if(!k)return null;const key=Object.keys(GLY).find(x=>k===norm(x))||Object.keys(GLY).find(x=>k.length>2&&(k.includes(norm(x))||norm(x).includes(k)));return key?GLY[key]:null}
+function variants(kw){const k=norm(kw)||'app',R=rng(hash(k)),g=glyphFor(k)||(kw.trim().slice(0,2).toUpperCase()||'A');const list=[];
+  const shapes=Object.keys(SHAPES),bgs=Object.keys(BGS),pats=Object.keys(PATS);
+  for(let i=0;i<8;i++){const pal=PAL[Math.floor(R()*PAL.length)];const o=Object.assign({},DEF,{shape:shapes[Math.floor(R()*shapes.length)],bg:bgs[Math.floor(R()*bgs.length)],c1:pal[0],c2:pal[1],angle:[0,45,90,135][Math.floor(R()*4)],pat:R()<.65?pats[1+Math.floor(R()*(pats.length-1))]:'none',patA:.1+R()*.15,patN:6+Math.floor(R()*6),text:g,gloss:R()<.6,ring:R()<.3,vignette:R()<.3,font:Object.keys(FONTS)[Math.floor(R()*5)],size:/\p{Extended_Pictographic}/u.test(g)?58:g.length>1?60:70,tc:(i%5==4)?'#111827':'#ffffff'});
+    if(o.tc==='#111827'){o.c1=shade(pal[0],.75);o.c2=shade(pal[1],.6)}list.push(o)}return list}
+const prev=$('prev');
+function repaint(){drawIcon(prev,IC)}
+function syncControls(){for(const id of ['shape','bg','pat','font']) $('i_'+id).value=IC[id];for(const id of ['c1','c2','tc','outlineC'])$('i_'+id).value=IC[id];
+  $('i_text').value=IC.text;$('i_size').value=IC.size;$('i_angle').value=IC.angle;$('i_patA').value=IC.patA*100;$('i_dy').value=IC.dy;
+  for(const id of ['shadow','outline','gloss','ring','vignette'])$('i_'+id).checked=!!IC[id]}
+function readControls(){for(const id of ['shape','bg','pat','font','c1','c2','tc','outlineC','text'])IC[id]=$('i_'+id).value;
+  IC.size=+$('i_size').value;IC.angle=+$('i_angle').value;IC.patA=$('i_patA').value/100;IC.dy=+$('i_dy').value;for(const id of ['shadow','outline','gloss','ring','vignette'])IC[id]=$('i_'+id).checked;repaint()}
+function fillSel(id,m){$('i_'+id).innerHTML=Object.entries(m).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+fillSel('shape',SHAPES);fillSel('bg',BGS);fillSel('pat',PATS);fillSel('font',{sans:'Moderna',serif:'Clásica',mono:'Código',round:'Redondeada',script:'Cursiva'});
+document.querySelectorAll('#igen input,#igen select').forEach(e=>e.addEventListener('input',readControls));
+function showVariants(kw){const box=$('icons');box.innerHTML='';variants(kw).forEach(o=>{const cv=document.createElement('canvas');cv.width=cv.height=256;cv.style.cssText='width:64px;height:64px;cursor:pointer';drawIcon(cv,o);cv.onclick=()=>{IC=Object.assign({},o);syncControls();repaint()};box.appendChild(cv)})}
+$('kwGo').onclick=()=>{const k=$('kw').value;const g=glyphFor(norm(k));IC=variants(k)[0];syncControls();repaint();showVariants(k)};
+$('rnd').onclick=()=>{const k=$('kw').value+Math.random();const v=variants(k);IC=v[0];if($('kw').value){const g=glyphFor(norm($('kw').value))||$('kw').value.slice(0,2).toUpperCase();IC.text=g}syncControls();repaint()};
+$('useIcon').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=1024;drawIcon(o,IC);const b=o.toDataURL('image/png').split(',')[1];iconB64=b;H2A.setIcon(b);
+  $('iconInfo').innerHTML='Icono seleccionado <img src="data:image/png;base64,'+b+'" width="40" style="vertical-align:middle;border-radius:8px">'};
+$('aiGo').onclick=()=>{const p=($('aiPrompt').value||$('kw').value).trim();if(!p){$('aiInfo').textContent='Escribe qué quieres en el icono.';return}
+  $('aiInfo').textContent='Generando con IA… puede tardar hasta 1 minuto.';$('aiGo').disabled=true;H2A.aiIcon(p)};
+function onAiError(m){$('aiGo').disabled=false;$('aiInfo').textContent='No se pudo generar con IA: '+m+' (revisa tu conexión a internet).'}
+repaint();syncControls();showVariants('app');
+
 $('allPerms').onchange=e=>document.querySelectorAll('#perms input[value]').forEach(i=>i.checked=e.target.checked);
 try{$('ver').textContent='v'+H2A.version()}catch(e){}
 function onFiles(r){$('fInfo').textContent=r.count+' archivo(s) listos. Página principal: '+(r.entry||'(no hay .html)')}
@@ -127,7 +199,7 @@ const cc=$('cc'),cctx=cc.getContext('2d');
 function cDraw(){cctx.clearRect(0,0,600,600);if(!cImg)return;const sc=base*cs,w=cImg.width*sc,h=cImg.height*sc;
   cx=Math.min(Math.max(cx,600-w>0?(600-w)/2:600-w),600-w>0?(600-w)/2:0);cy=Math.min(Math.max(cy,600-h>0?(600-h)/2:600-h),600-h>0?(600-h)/2:0);
   cctx.drawImage(cImg,cx,cy,w,h)}
-function onIconImage(b64){
+function onIconImage(b64){$('aiGo').disabled=false;$('aiInfo').textContent='';
   const im=new Image();im.onload=()=>{cImg=im;base=Math.max(600/im.width,600/im.height);cs=1;$('zoom').value=1;
     cx=(600-im.width*base)/2;cy=(600-im.height*base)/2;$('crop').style.display='flex';cDraw()};
   im.onerror=()=>{$('iconInfo').textContent='No se pudo abrir esa imagen'};im.src='data:image/png;base64,'+b64}
@@ -140,7 +212,7 @@ $('cNo').onclick=()=>{$('crop').style.display='none'};
 $('cOk').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=1024;const k=1024/600,sc=base*cs;
   o.getContext('2d').drawImage(cImg,cx*k,cy*k,cImg.width*sc*k,cImg.height*sc*k);
   const b=o.toDataURL('image/png').split(',')[1];H2A.setIcon(b);iconB64=b;
-  $('iconInfo').innerHTML='Icono recortado listo <img src="data:image/png;base64,'+b+'" width="40" style="vertical-align:middle;border-radius:8px">';
+  $('aiGo').disabled=false;$('aiInfo').textContent='';$('iconInfo').innerHTML='Icono recortado listo <img src="data:image/png;base64,'+b+'" width="40" style="vertical-align:middle;border-radius:8px">';
   $('crop').style.display='none'};
 $('go').onclick=()=>{
   const m=$('msg');m.style.display='block';m.className='';m.textContent='Generando…';$('go').disabled=true;

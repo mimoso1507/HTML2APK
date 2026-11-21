@@ -39,7 +39,7 @@ public final class ApkBuilder {
                 byte[] data = readAll(zf.getInputStream(ze));
                 if (n.equals("AndroidManifest.xml")) {
                     data = patchManifest(data, in);
-                } else if (in.iconPng != null && n.matches("res/.*/ic_launcher\\.png")) {
+                } else if (in.iconPng != null && n.matches("res/.*\\.png")) {
                     data = in.iconPng;
                 }
                 if (n.equals("resources.arsc")) putStored(zos, co, n, data);

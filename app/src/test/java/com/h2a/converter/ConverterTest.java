@@ -36,6 +36,26 @@ public class ConverterTest {
             assertNotNull(z.getEntry("assets/h2a.json"));
             assertNotNull(z.getEntry("resources.arsc"));
         }
+        // Con icono propio: TODAS las imagenes PNG de res/ deben ser el icono (si no, queda el generico)
+        java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(64, 64, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        for (int x = 0; x < 64; x++) for (int y = 0; y < 64; y++) bi.setRGB(x, y, 0xFFE91E63 + x * 3);
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(bi, "png", bo);
+        byte[] icon = bo.toByteArray();
+        Converter.Result r2 = Converter.convert(req, files, template,
+                (java.security.PrivateKey) ks.getKey("h2a", "h2apass".toCharArray()),
+                (java.security.cert.X509Certificate) ks.getCertificate("h2a"), icon, icon, new File("build/test-out-icon"));
+        int pngs = 0;
+        try (ZipFile z = new ZipFile(r2.apk)) {
+            for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = z.entries(); en.hasMoreElements();) {
+                java.util.zip.ZipEntry ze = en.nextElement();
+                if (ze.getName().startsWith("res/") && ze.getName().endsWith(".png")) {
+                    pngs++;
+                    assertArrayEquals(ze.getName(), icon, z.getInputStream(ze).readAllBytes());
+                }
+            }
+        }
+        assertTrue("la plantilla no tiene PNG de icono", pngs >= 1);
         try (ZipFile z = new ZipFile(r.exeZip)) {
             assertNotNull(z.getEntry("app/index.html"));
             assertNotNull(z.getEntry("main.js"));
