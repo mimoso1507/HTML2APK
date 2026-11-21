@@ -37,11 +37,7 @@ public class ConverterTest {
             assertNotNull(z.getEntry("resources.arsc"));
         }
         // Con icono propio: TODAS las imagenes PNG de res/ deben ser el icono (si no, queda el generico)
-        java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(64, 64, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        for (int x = 0; x < 64; x++) for (int y = 0; y < 64; y++) bi.setRGB(x, y, 0xFFE91E63 + x * 3);
-        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-        javax.imageio.ImageIO.write(bi, "png", bo);
-        byte[] icon = bo.toByteArray();
+        byte[] icon = "PNG-FALSO-PARA-PRUEBA".getBytes(StandardCharsets.UTF_8);
         Converter.Result r2 = Converter.convert(req, files, template,
                 (java.security.PrivateKey) ks.getKey("h2a", "h2apass".toCharArray()),
                 (java.security.cert.X509Certificate) ks.getCertificate("h2a"), icon, icon, new File("build/test-out-icon"));

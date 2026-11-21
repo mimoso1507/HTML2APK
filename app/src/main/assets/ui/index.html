@@ -57,7 +57,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 
 <fieldset><legend>Básico</legend>
 <label>Nombre de la app</label><input type="text" id="name" value="MiApp">
-<label>Orientación</label><select id="orientation"><option value="unspecified">Ambas (gira con el celular)</option><option value="portrait">Solo vertical</option><option value="landscape">Solo horizontal</option><option value="sensor">Ambas aunque la rotación esté bloqueada</option></select>
+<div id="orientBox"><label>Orientación</label><select id="orientation"><option value="unspecified">Ambas (gira con el celular)</option><option value="portrait">Solo vertical</option><option value="landscape">Solo horizontal</option><option value="sensor">Ambas aunque la rotación esté bloqueada</option></select></div>
 <div class="chk"><label><input type="checkbox" id="tApk" checked> Android (APK)</label><label><input type="checkbox" id="tExe" checked> Windows (EXE)</label></div>
 </fieldset>
 
@@ -69,7 +69,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <div><label>Código de versión (Android)</label><input type="number" id="versionCode" value="1"></div></div>
 <label>Descripción</label><input type="text" id="description"></fieldset>
 
-<fieldset><legend>Android</legend><div class="row">
+<fieldset id="andSec"><legend>Android</legend><div class="row">
 
 <div><label>Duración splash (ms)</label><input type="number" id="splashDuration" value="1500"></div>
 <div><label>Color splash</label><input type="text" id="splashColor" value="#ffffff"></div>
@@ -79,7 +79,7 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <div class="chk"><label><input type="checkbox" id="fullscreen"> Pantalla completa</label><label><input type="checkbox" id="allowCleartext"> Permitir http (sin https)</label><label><input type="checkbox" id="keepAwake"> Mantener pantalla encendida</label><label><input type="checkbox" id="askOnStart" checked> Pedir permisos al abrir tras instalar</label></div>
 <label>Permisos</label><div class="chk" id="perms"><label><input type="checkbox" id="allPerms"><b>Marcar todos</b></label><label><input type="checkbox" value="camera">Cámara</label><label><input type="checkbox" value="microphone">Micrófono</label><label><input type="checkbox" value="location">Ubicación precisa</label><label><input type="checkbox" value="coarseLocation">Ubicación aproximada</label><label><input type="checkbox" value="backgroundLocation">Ubicación en segundo plano</label><label><input type="checkbox" value="storage">Leer almacenamiento</label><label><input type="checkbox" value="writeStorage">Escribir almacenamiento</label><label><input type="checkbox" value="manageStorage">Todos los archivos</label><label><input type="checkbox" value="images">Fotos</label><label><input type="checkbox" value="videos">Videos</label><label><input type="checkbox" value="audio">Audio/música</label><label><input type="checkbox" value="notifications">Notificaciones</label><label><input type="checkbox" value="contacts">Leer contactos</label><label><input type="checkbox" value="writeContacts">Editar contactos</label><label><input type="checkbox" value="calendar">Leer calendario</label><label><input type="checkbox" value="writeCalendar">Editar calendario</label><label><input type="checkbox" value="phone">Estado del teléfono</label><label><input type="checkbox" value="callPhone">Hacer llamadas</label><label><input type="checkbox" value="callLog">Registro de llamadas</label><label><input type="checkbox" value="sms">Leer SMS</label><label><input type="checkbox" value="sendSms">Enviar SMS</label><label><input type="checkbox" value="receiveSms">Recibir SMS</label><label><input type="checkbox" value="bodySensors">Sensores corporales</label><label><input type="checkbox" value="activityRecognition">Actividad física</label><label><input type="checkbox" value="bluetooth">Bluetooth</label><label><input type="checkbox" value="bluetoothConnect">Conectar Bluetooth</label><label><input type="checkbox" value="bluetoothScan">Buscar Bluetooth</label><label><input type="checkbox" value="nearbyWifi">Wi-Fi cercano</label><label><input type="checkbox" value="wifiState">Estado Wi-Fi</label><label><input type="checkbox" value="networkState">Estado de red</label><label><input type="checkbox" value="changeWifi">Cambiar Wi-Fi</label><label><input type="checkbox" value="nfc">NFC</label><label><input type="checkbox" value="vibrate">Vibración</label><label><input type="checkbox" value="wakeLock">Mantener activo</label><label><input type="checkbox" value="bootCompleted">Iniciar con el sistema</label><label><input type="checkbox" value="foregroundService">Servicio en primer plano</label><label><input type="checkbox" value="overlay">Mostrar sobre otras apps</label><label><input type="checkbox" value="flashlight">Linterna</label><label><input type="checkbox" value="biometric">Huella/biometría</label><label><input type="checkbox" value="installPackages">Instalar paquetes</label><label><input type="checkbox" value="accounts">Cuentas</label><label><input type="checkbox" value="modifyAudio">Ajustes de audio</label><label><input type="checkbox" value="exactAlarm">Alarmas exactas</label></div></fieldset>
 
-<fieldset><legend>Windows</legend><div class="row">
+<fieldset id="winSec"><legend>Windows</legend><div class="row">
 <div><label>Ancho</label><input type="number" id="width" value="1000"></div><div><label>Alto</label><input type="number" id="height" value="700"></div>
 <div><label>Ancho mínimo</label><input type="number" id="minWidth" value="0"></div><div><label>Alto mínimo</label><input type="number" id="minHeight" value="0"></div>
 <div><label>Color de fondo</label><input type="text" id="backgroundColor" value="#ffffff"></div>
@@ -179,6 +179,10 @@ $('aiGo').onclick=()=>{const p=($('aiPrompt').value||$('kw').value).trim();if(!p
 function onAiError(m){$('aiGo').disabled=false;$('aiInfo').textContent='No se pudo generar con IA: '+m+' (revisa tu conexión a internet).'}
 repaint();syncControls();showVariants('app');
 
+function applyTargets(){const a=$('tApk').checked,w=$('tExe').checked;
+  $('andSec').style.display=a?'':'none';$('winSec').style.display=w?'':'none';$('orientBox').style.display=a?'':'none';
+  if(!a&&!w){$('tApk').checked=true;applyTargets()}}
+$('tApk').onchange=$('tExe').onchange=applyTargets;applyTargets();
 $('allPerms').onchange=e=>document.querySelectorAll('#perms input[value]').forEach(i=>i.checked=e.target.checked);
 try{$('ver').textContent='v'+H2A.version()}catch(e){}
 function onFiles(r){$('fInfo').textContent=r.count+' archivo(s) listos. Página principal: '+(r.entry||'(no hay .html)')}
