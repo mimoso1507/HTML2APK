@@ -232,6 +232,11 @@ public class MainActivity extends Activity {
                 v.put(MediaStore.Downloads.DISPLAY_NAME, f.getName());
                 v.put(MediaStore.Downloads.MIME_TYPE, mime);
                 v.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/HTML2APK");
+                try { // evitar que quede una copia vieja con el mismo nombre (y "(1)" en la nueva)
+                    getContentResolver().delete(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                            MediaStore.Downloads.DISPLAY_NAME + "=? AND " + MediaStore.Downloads.RELATIVE_PATH + " LIKE ?",
+                            new String[]{f.getName(), Environment.DIRECTORY_DOWNLOADS + "/HTML2APK%"});
+                } catch (Exception ignored) { }
                 Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
                 if (u == null) return "";
                 try (InputStream in = new FileInputStream(f); OutputStream out = getContentResolver().openOutputStream(u)) {

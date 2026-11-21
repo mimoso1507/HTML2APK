@@ -25,7 +25,8 @@ jobs:
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
           APK=$(ls app/build/test-out/*.apk | head -1)
           unzip -l $APK | head -5
-          $BT/aapt2 dump badging $APK | head -30
+          $BT/aapt2 dump badging $APK | grep -E "^package|application-label:|uses-permission|application-icon-(160|320|640)"
+          $BT/aapt2 dump badging app/build/test-out-icon/*.apk | grep -E "application-icon-(160|320|640)"
           $BT/apksigner verify --verbose $APK
       - name: Build converter APK
         run: gradle :app:assembleDebug --no-daemon -Pvcode=${{ github.run_number }}

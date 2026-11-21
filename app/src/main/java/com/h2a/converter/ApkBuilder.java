@@ -31,6 +31,17 @@ public final class ApkBuilder {
         try (ZipFile zf = new ZipFile(template);
              Counting co = new Counting(new BufferedOutputStream(new FileOutputStream(unsigned)));
              ZipOutputStream zos = new ZipOutputStream(co)) {
+            Set<String> iconPaths = new HashSet<>();
+            ZipEntry arscEntry = zf.getEntry("resources.arsc");
+            if (arscEntry != null) iconPaths = ArscIcons.iconPaths(readAll(zf.getInputStream(arscEntry)), "ic_launcher");
+            if (iconPaths.isEmpty()) { // respaldo: la PNG mas grande de res/
+                long best = -1; String bestName = null;
+                for (Enumeration<? extends ZipEntry> e2 = zf.entries(); e2.hasMoreElements();) {
+                    ZipEntry z2 = e2.nextElement();
+                    if (z2.getName().startsWith("res/") && z2.getName().endsWith(".png") && !z2.getName().endsWith(".9.png") && z2.getSize() > best) { best = z2.getSize(); bestName = z2.getName(); }
+                }
+                if (bestName != null) iconPaths.add(bestName);
+            }
             Enumeration<? extends ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
                 ZipEntry ze = en.nextElement();
@@ -39,7 +50,7 @@ public final class ApkBuilder {
                 byte[] data = readAll(zf.getInputStream(ze));
                 if (n.equals("AndroidManifest.xml")) {
                     data = patchManifest(data, in);
-                } else if (in.iconPng != null && n.matches("res/.*\\.png")) {
+                } else if (in.iconPng != null && iconPaths.contains(n)) {
                     data = in.iconPng;
                 }
                 if (n.equals("resources.arsc")) putStored(zos, co, n, data);

@@ -41,17 +41,12 @@ public class ConverterTest {
         Converter.Result r2 = Converter.convert(req, files, template,
                 (java.security.PrivateKey) ks.getKey("h2a", "h2apass".toCharArray()),
                 (java.security.cert.X509Certificate) ks.getCertificate("h2a"), icon, icon, new File("build/test-out-icon"));
-        int pngs = 0;
+        Set<String> paths;
+        try (ZipFile zt = new ZipFile(template)) { paths = ArscIcons.iconPaths(zt.getInputStream(zt.getEntry("resources.arsc")).readAllBytes(), "ic_launcher"); }
+        assertFalse("no se encontro ic_launcher en resources.arsc", paths.isEmpty());
         try (ZipFile z = new ZipFile(r2.apk)) {
-            for (java.util.Enumeration<? extends java.util.zip.ZipEntry> en = z.entries(); en.hasMoreElements();) {
-                java.util.zip.ZipEntry ze = en.nextElement();
-                if (ze.getName().startsWith("res/") && ze.getName().endsWith(".png")) {
-                    pngs++;
-                    assertArrayEquals(ze.getName(), icon, z.getInputStream(ze).readAllBytes());
-                }
-            }
+            for (String pth : paths) assertArrayEquals(pth, icon, z.getInputStream(z.getEntry(pth)).readAllBytes());
         }
-        assertTrue("la plantilla no tiene PNG de icono", pngs >= 1);
         try (ZipFile z = new ZipFile(r.exeZip)) {
             assertNotNull(z.getEntry("app/index.html"));
             assertNotNull(z.getEntry("main.js"));
