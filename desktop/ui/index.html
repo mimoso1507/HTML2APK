@@ -22,6 +22,8 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <label>Archivo HTML o carpeta completa de la web (con imágenes, css, js)</label>
 <input type="file" id="fFile" accept=".html,.htm" multiple> <br>
 <label>…o elige una carpeta</label><input type="file" id="fDir" webkitdirectory>
+<label>…o escribe una dirección web / red local (la app abrirá esa dirección)</label><input type="text" id="url" placeholder="ej: 192.168.40.9:8080 o https://misitio.com" inputmode="url" autocapitalize="off" spellcheck="false">
+<div style="font-size:12px;opacity:.7;margin-top:4px">Si escribes una dirección, se ignoran los archivos. Con http:// (sin https) se permite automáticamente. El dispositivo debe estar en la misma red.</div>
 <label>Icono (PNG cuadrado, 1024×1024 ideal)</label><input type="file" id="fIcon" accept="image/png">
 </fieldset>
 
@@ -101,10 +103,11 @@ $('allPerms').onchange=e=>document.querySelectorAll('#perms input[value]').forEa
 $('go').onclick=async()=>{
   const m=$('msg');m.style.display='block';m.className='';m.textContent='Generando…';
   try{
-    const list=[...$('fDir').files,...$('fFile').files];
+    const url=$('url').value.trim();
+    const list=url?[]:[...$('fDir').files,...$('fFile').files];
     const files=await Promise.all(list.map(async f=>({path:f.webkitRelativePath||f.name,data:await b64(f)})));
     const full=document.body.classList.contains('completa');
-    const o={mode:full?'completa':'minima',name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean)};
+    const o={mode:full?'completa':'minima',name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean),url};
     if(full){
       for(const id of ['packageId','author','version','description','orientation','splashColor','statusBarColor','backgroundColor','installer'])o[id]=$(id).value;
       for(const id of ['versionCode','splashDuration','minSdk','targetSdk','width','height','minWidth','minHeight'])o[id]=+$(id).value;

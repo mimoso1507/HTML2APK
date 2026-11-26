@@ -8,7 +8,7 @@ import java.util.zip.*;
 
 /** Genera un proyecto Electron (ZIP) que GitHub Actions o una PC convierten en .exe. */
 public final class ExeProject {
-    public static void write(JSONObject o, String entry, String packageId, Map<String, byte[]> www, byte[] icon, File outZip) throws Exception {
+    public static void write(JSONObject o, String entry, String url, String packageId, Map<String, byte[]> www, byte[] icon, File outZip) throws Exception {
         Map<String, byte[]> f = new LinkedHashMap<>();
         for (Map.Entry<String, byte[]> w : www.entrySet()) f.put("app/" + w.getKey(), w.getValue());
         String name = o.optString("name", "MiApp");
@@ -17,6 +17,7 @@ public final class ExeProject {
 
         JSONObject c = new JSONObject();
         c.put("entry", "app/" + entry);
+        if (url != null && !url.isEmpty()) c.put("url", url);
         c.put("width", o.optInt("width", 1000)); c.put("height", o.optInt("height", 700));
         if (o.optInt("minWidth", 0) > 0) c.put("minWidth", o.optInt("minWidth"));
         if (o.optInt("minHeight", 0) > 0) c.put("minHeight", o.optInt("minHeight"));
@@ -50,6 +51,7 @@ public final class ExeProject {
         f.put("construir.bat", "@echo off\r\ncall npm install || exit /b 1\r\ncall npm run build:exe || exit /b 1\r\necho EXE en la carpeta dist\r\npause\r\n".getBytes("UTF-8"));
         f.put(".github/workflows/exe.yml", WORKFLOW.getBytes("UTF-8"));
         f.put("LEEME.txt", ("Proyecto Windows de " + name + "\n\n"
+                + (url != null && !url.isEmpty() ? "La app abre la direccion " + url + " (la PC debe estar en la misma red).\n\n" : "")
                 + "OPCION 1 (GitHub, sin instalar nada): sube TODO el contenido de este ZIP a un repositorio de GitHub.\n"
                 + "  En la pestana Actions ejecuta 'Build EXE'; el .exe aparece como artefacto descargable.\n\n"
                 + "OPCION 2 (PC con Windows y Node.js 18+): descomprime y ejecuta construir.bat. El .exe queda en la carpeta dist.\n"
@@ -84,6 +86,11 @@ public final class ExeProject {
             + "  if (c.autoGrantWeb) win.webContents.session.setPermissionRequestHandler((wc, perm, cb) => cb(true));\n"
             + "  if (c.hideMenu) Menu.setApplicationMenu(null);\n"
             + "  if (c.maximized) win.maximize();\n"
-            + "  win.loadFile(path.join(__dirname, c.entry));\n}\n"
+            + "  if (c.url) {\n"
+            + "    // Si la direccion no responde, muestra la pagina local con el boton Reintentar.\n"
+            + "    win.webContents.on('did-fail-load', (e, code, desc, failedUrl, isMain) => {\n"
+            + "      if (isMain && code !== -3) win.loadFile(path.join(__dirname, c.entry));\n    });\n"
+            + "    win.loadURL(c.url);\n"
+            + "  } else win.loadFile(path.join(__dirname, c.entry));\n}\n"
             + "app.whenReady().then(create);\napp.on('window-all-closed', () => app.quit());\n";
 }

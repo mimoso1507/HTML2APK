@@ -52,4 +52,26 @@ public class ConverterTest {
             assertNotNull(z.getEntry("main.js"));
         }
     }
+
+    @Test
+    public void urlModeOpensLocalNetworkAddress() throws Exception {
+        assertEquals("http://192.168.40.9:8080/", Converter.normUrl("192.168.40.9:8080"));
+        assertEquals("https://misitio.com/app", Converter.normUrl(" https://misitio.com/app "));
+        assertEquals("", Converter.normUrl(""));
+        try { Converter.normUrl("ftp://x"); fail(); } catch (IOException expected) { }
+        JSONObject req = new JSONObject("{\"options\":{\"mode\":\"minima\",\"name\":\"Red\",\"targets\":[\"exe\"],\"url\":\"192.168.40.9:8080\"}}");
+        Converter.Result r = Converter.convert(req, null, null, null, null, null, null, new File("build/test-out-url"));
+        try (ZipFile z = new ZipFile(r.exeZip)) {
+            String cfg = new String(readAll(z.getInputStream(z.getEntry("config.json"))), StandardCharsets.UTF_8);
+            assertEquals("http://192.168.40.9:8080/", new JSONObject(cfg).getString("url"));
+            assertNotNull(z.getEntry("app/index.html"));
+        }
+    }
+
+    private static byte[] readAll(InputStream in) throws IOException {
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        byte[] buf = new byte[4096]; int n;
+        while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
+        return bo.toByteArray();
+    }
 }
