@@ -48,6 +48,8 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingWebRequest;
     private GeolocationPermissions.Callback pendingGeo;
     private String pendingGeoOrigin;
+    private String startHost; // host de la direccion web (modo URL), o null
+    private String localEntry;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -86,7 +88,14 @@ public class MainActivity extends Activity {
         setupWebView();
 
         String entry = cfg.optString("entry", "index.html");
-        web.loadUrl("https://" + HOST + "/assets/www/" + Uri.encode(entry, "/"));
+        localEntry = "https://" + HOST + "/assets/www/" + Uri.encode(entry, "/");
+        String url = cfg.optString("url", "");
+        if (!url.isEmpty()) {
+            startHost = Uri.parse(url).getHost();
+            web.loadUrl(url);
+        } else {
+            web.loadUrl(localEntry);
+        }
 
         showSplash();
         if (cfg.optBoolean("askOnStart", true)) requestStartupPermissions();
@@ -122,8 +131,22 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest r) {
                 Uri u = r.getUrl();
                 if (HOST.equals(u.getHost())) return false;
+                if (startHost != null && startHost.equalsIgnoreCase(u.getHost())) return false; // misma direccion web
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                 return true;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest r, android.webkit.WebResourceError e) {
+                // Modo URL: si la direccion no responde, muestra la pagina local "sin conexion" con Reintentar.
+                if (startHost != null && r.isForMainFrame() && !HOST.equals(r.getUrl().getHost())) view.loadUrl(localEntry);
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public void onReceivedError(WebView view, int code, String desc, String failingUrl) {
+                // Android 5/6 (API < 23): misma logica
+                if (Build.VERSION.SDK_INT < 23 && startHost != null && failingUrl != null && !failingUrl.contains(HOST)) view.loadUrl(localEntry);
             }
         });
 

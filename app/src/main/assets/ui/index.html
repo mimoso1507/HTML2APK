@@ -35,6 +35,9 @@ input[type=text],input[type=number],select{width:100%;padding:7px;border:1px sol
 <button type="button" class="sec" onclick="H2A.pickFolder()">Elegir carpeta de la web</button>
 <button type="button" class="sec" onclick="H2A.pickIcon()">Icono desde una imagen</button></div>
 <div id="fInfo" style="margin-top:8px;font-size:13px">Aún no elegiste nada.</div>
+<label>…o escribe una dirección web / red local (la app abrirá esa dirección)</label>
+<input type="text" id="url" placeholder="ej: 192.168.40.9:8080 o https://misitio.com" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+<div style="font-size:12px;opacity:.7;margin-top:4px">Si escribes una dirección, se ignoran los archivos. Con http:// (sin https) se permite automáticamente. El celular debe estar en la misma red Wi-Fi.</div>
 <div id="iconInfo" style="font-size:13px"></div>
 </fieldset>
 
@@ -248,7 +251,7 @@ $('cOk').onclick=()=>{const o=document.createElement('canvas');o.width=o.height=
 $('go').onclick=()=>{
   const m=$('msg');m.style.display='block';m.className='';m.textContent='Generando…';$('go').disabled=true;
   const full=document.body.classList.contains('completa');
-  const o={mode:full?'completa':'minima',orientation:$('orientation').value,name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean)};
+  const o={mode:full?'completa':'minima',orientation:$('orientation').value,name:$('name').value||'MiApp',targets:[$('tApk').checked&&'apk',$('tExe').checked&&'exe'].filter(Boolean),url:$('url').value.trim()};
   if(full){
     for(const id of ['packageId','author','version','description','splashColor','statusBarColor','backgroundColor','installer'])o[id]=$(id).value;
     for(const id of ['versionCode','splashDuration','minSdk','targetSdk','width','height','minWidth','minHeight'])o[id]=+$(id).value;

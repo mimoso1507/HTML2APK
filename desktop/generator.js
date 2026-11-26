@@ -43,16 +43,36 @@ const RUNTIME = new Set(['CAMERA','RECORD_AUDIO','ACCESS_FINE_LOCATION','ACCESS_
   'SEND_SMS','RECEIVE_SMS','BODY_SENSORS','ACTIVITY_RECOGNITION','BLUETOOTH_CONNECT','BLUETOOTH_SCAN','NEARBY_WIFI_DEVICES','GET_ACCOUNTS']);
 const slug = s => (s || 'app').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '') || 'app';
 const w = (p, c) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); };
+// Normaliza una dirección web: "192.168.40.9:8080" -> "http://192.168.40.9:8080/". Vacío -> ''.
+function normUrl(u) {
+  u = String(u || '').trim();
+  if (!u) return '';
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = 'http://' + u;
+  let x;
+  try { x = new URL(u); } catch (e) { throw new Error('La dirección no es válida: ' + u); }
+  if (x.protocol !== 'http:' && x.protocol !== 'https:') throw new Error('La dirección debe empezar con http:// o https://');
+  return x.href;
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Página que se muestra si la dirección no responde (sin red o servidor apagado).
+const offlinePage = (url, name) => `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px system-ui,sans-serif;background:#f5f6f8;color:#1c1e21;text-align:center}
+@media(prefers-color-scheme:dark){body{background:#15171a;color:#e8eaed}}div{padding:24px;max-width:420px}a{display:inline-block;margin-top:16px;padding:12px 22px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none}</style></head>
+<body><div><h2>No se pudo conectar</h2><p>Revisa que estés en la misma red Wi-Fi y que el servidor esté encendido:</p><p><b>${esc(url)}</b></p><a href="${esc(url)}">Reintentar</a></div></body></html>`;
 
 function generate(input, outRoot) {
   const o = Object.assign({}, DEFAULTS, input.options || {});
   if (o.mode === 'minima') { // MINIMA: solo lo esencial, el resto por defecto
-    const keep = { name: o.name, targets: o.targets, mode: 'minima' };
+    const keep = { name: o.name, targets: o.targets, mode: 'minima', url: o.url };
     Object.assign(o, DEFAULTS, keep);
   }
   o.packageId = o.packageId || `com.app.${slug(o.name)}`;
-  const files = input.files || []; // [{path, data(base64)}]
-  if (!files.length) throw new Error('No se recibió ningún archivo HTML.');
+  o.url = normUrl(o.url);
+  if (o.url && o.url.startsWith('http:')) o.allowCleartext = true; // red local sin https
+  let files = input.files || []; // [{path, data(base64)}]
+  // Modo dirección web: la app abre o.url; solo se empaqueta la página de "sin conexión".
+  if (o.url) files = [{ path: 'index.html', data: Buffer.from(offlinePage(o.url, o.name)).toString('base64') }];
+  if (!files.length) throw new Error('Elige un archivo HTML o escribe una dirección web (ej: 192.168.40.9:8080).');
   let entry = files.find(f => /(^|\/)index\.html?$/i.test(f.path)) || files.find(f => /\.html?$/i.test(f.path));
   if (!entry) throw new Error('No hay ningún archivo .html.');
   const base = path.posix.dirname(entry.path.replace(/\\/g, '/'));
@@ -76,7 +96,8 @@ function generate(input, outRoot) {
     if (icon) w(path.join(d, 'resources', 'icon.png'), icon);
     w(path.join(d, 'capacitor.config.json'), JSON.stringify({
       appId: o.packageId, appName: o.name, webDir: 'www', backgroundColor: o.backgroundColor,
-      server: { androidScheme: 'https', cleartext: !!o.allowCleartext },
+      server: Object.assign({ androidScheme: 'https', cleartext: !!o.allowCleartext },
+        o.url ? { url: o.url, errorPath: 'index.html' } : {}),
       plugins: { SplashScreen: { launchShowDuration: +o.splashDuration, backgroundColor: o.splashColor, launchAutoHide: true },
         StatusBar: { backgroundColor: o.statusBarColor } },
     }, null, 2));
@@ -111,7 +132,7 @@ jobs:
   if (o.targets.includes('exe')) {
     const d = path.join(dir, 'windows'); copyWeb(path.join(d, 'app'));
     if (icon) w(path.join(d, 'build', 'icon.png'), icon);
-    w(path.join(d, 'config.json'), JSON.stringify({ entry: 'app/' + entryRel, width: +o.width, height: +o.height,
+    w(path.join(d, 'config.json'), JSON.stringify({ entry: 'app/' + entryRel, url: o.url || undefined, width: +o.width, height: +o.height,
       minWidth: +o.minWidth || undefined, minHeight: +o.minHeight || undefined, resizable: !!o.resizable, frame: !!o.frame,
       alwaysOnTop: !!o.alwaysOnTop, fullscreen: !!o.exeFullscreen, maximized: !!o.maximized, hideMenu: !!o.hideMenu,
       devTools: !!o.devTools, autoGrantWeb: o.autoGrantWeb !== false, singleInstance: !!o.singleInstance, title: o.name, backgroundColor: o.backgroundColor,
@@ -131,7 +152,13 @@ function create() {
   if (c.autoGrantWeb) win.webContents.session.setPermissionRequestHandler((wc, perm, cb) => cb(true));
   if (c.hideMenu) Menu.setApplicationMenu(null);
   if (c.maximized) win.maximize();
-  win.loadFile(path.join(__dirname, c.entry));
+  if (c.url) {
+    // Si la dirección no responde, muestra la página local con el botón "Reintentar".
+    win.webContents.on('did-fail-load', (e, code, desc, failedUrl, isMain) => {
+      if (isMain && code !== -3) win.loadFile(path.join(__dirname, c.entry));
+    });
+    win.loadURL(c.url);
+  } else win.loadFile(path.join(__dirname, c.entry));
 }
 app.whenReady().then(create);
 app.on('window-all-closed', () => app.quit());
@@ -162,6 +189,7 @@ jobs:
     result.projects.push('windows');
   }
   w(path.join(dir, 'LEEME.txt'), `Proyecto generado: ${o.name} (${o.packageId}) v${o.version}\n\n` +
+(o.url ? `La app abre la dirección ${o.url}\n  El celular o la PC deben estar en la misma red y el servidor encendido.\n\n` : '') +
 `ANDROID (APK): entra a la carpeta android y ejecuta construir.bat (Windows) o construir.sh.\n  Requiere Node.js 18+, Java 17 y Android SDK (ANDROID_HOME).\n  Sin SDK: sube la carpeta a GitHub; el workflow .github/workflows/apk.yml compila el APK en la nube.\n\n` +
 `WINDOWS (EXE): entra a la carpeta windows y ejecuta construir.bat. Requiere Node.js 18+.\n  Probar sin compilar: npm install && npm start.\n  Resultado en dist/.\n`);
   result.options = o;
@@ -221,4 +249,4 @@ if (o.hasIcon) { try { require('child_process').execSync('npx capacitor-assets g
 console.log('Android configurado.');
 `;
 }
-module.exports = { generate, DEFAULTS, PERMS };
+module.exports = { generate, normUrl, DEFAULTS, PERMS };
